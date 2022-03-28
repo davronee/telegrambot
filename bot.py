@@ -1,48 +1,48 @@
 import logging
- 
- from aiogram import Bot, Dispatcher, executor, types
- 
-API_TOKEN = '5009512905:AAHWIN7kPEdA3Br2Q0W3SZRujEZ3GOQFyx4'
+from typing import Any
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
+from aiogram import Bot, Dispatcher, types
+from aiogram.types import Message
 
-# Initialize bot and dispatcher
-bot = Bot(token=API_TOKEN)
-dp = Dispatcher(bot)
+TOKEN = "5009512905:AAHWIN7kPEdA3Br2Q0W3SZRujEZ3GOQFyx4"
+dp = Dispatcher()
+
+logger = logging.getLogger(__name__)
 
 
-@dp.message_handler(commands=['start', 'help'])
-async def send_welcome(message: types.Message):
+@dp.message(commands=["start"])
+async def command_start_handler(message: Message) -> None:
     """
-    This handler will be called when user sends `/start` or `/help` command
+    This handler receive messages with `/start` command
     """
-    await message.reply("Hi!\nI'm EchoBot!\nPowered by aiogram.")
+    # Most of event objects has an aliases for API methods to be called in event context
+    # For example if you want to answer to incoming message you can use `message.answer(...)` alias
+    # and the target chat will be passed to :ref:`aiogram.methods.send_message.SendMessage` method automatically
+    # or call API method directly via Bot instance: `bot.send_message(chat_id=message.chat.id, ...)`
+    await message.answer(f"Hello, <b>{message.from_user.full_name}!</b>")
 
 
-@dp.message_handler(regexp='(^cat[s]?$|puss)')
-async def cats(message: types.Message):
-    with open('data/cats.jpg', 'rb') as photo:
-        '''
-        # Old fashioned way:
-        await bot.send_photo(
-            message.chat.id,
-            photo,
-            caption='Cats are here 😺',
-            reply_to_message_id=message.message_id,
-        )
-        '''
+@dp.message()
+async def echo_handler(message: types.Message) -> None:
+    """
+    Handler will forward received message back to the sender
 
-        await message.reply_photo(photo, caption='Cats are here 😺')
-
-
-@dp.message_handler()
-async def echo(message: types.Message):
-    # old style:
-    # await bot.send_message(message.chat.id, message.text)
-
-    await message.answer(message.text)
+    By default message handler will handle all message types (like text, photo, sticker and etc.)
+    """
+    try:
+        # Send copy of the received message
+        await message.send_copy(chat_id=message.chat.id)
+    except TypeError:
+        # But not all the types is supported to be copied so need to handle it
+        await message.answer("Nice try!")
 
 
-if __name__ == '__main__':
-    executor.start_polling(dp, skip_updates=True)
+def main() -> None:
+    # Initialize Bot instance with an default parse mode which will be passed to all API calls
+    bot = Bot(TOKEN, parse_mode="HTML")
+    # And the run events dispatching
+    dp.run_polling(bot)
+
+
+if __name__ == "__main__":
+    main()
