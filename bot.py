@@ -1,79 +1,28 @@
-import telebot
-import bs4
-from Task import Task
-import parser
+from aiogram import Bot, types
+from aiogram.dispatcher import Dispatcher
+from aiogram.utils import executor
 
-#main variables
-TOKEN = '5009512905:AAHWIN7kPEdA3Br2Q0W3SZRujEZ3GOQFyx4'
-bot = telebot.TeleBot(TOKEN)
-task = Task()
+from config import TOKEN
 
-#handlers
-@bot.message_handler(commands=['start', 'go'])
-def start_handler(message):
-    if not task.isRunning:
-        chat_id = message.chat.id
-        msg = bot.send_message(chat_id, 'Откуда парсить?')
-        bot.register_next_step_handler(msg, askSource)
-        task.isRunning = True
 
-def askSource(message):
-    chat_id = message.chat.id
-    text = message.text.lower()
-    if text in task.names[0]:
-        task.mySource = 'top'
-        msg = bot.send_message(chat_id, 'За какой временной промежуток?')
-        bot.register_next_step_handler(msg, askAge)
-    elif text in task.names[1]:
-        task.mySource = 'all'
-        msg = bot.send_message(chat_id, 'Какой минимальный порог рейтинга?')
-        bot.register_next_step_handler(msg, askRating)
-    else:
-        msg = bot.send_message(chat_id, 'Такого раздела нет. Введите раздел корректно.')
-        bot.register_next_step_handler(msg, askSource)
-        return
+bot = Bot(token=TOKEN)
+dp = Dispatcher(bot)
 
-def askAge(message):
-    chat_id = message.chat.id
-    text = message.text.lower()
-    filters = task.filters[0]
-    if text not in filters:
-        msg = bot.send_message(chat_id, 'Такого временного промежутка нет. Введите порог корректно.')
-        bot.register_next_step_handler(msg, askAge)
-        return
-    task.myFilter = task.filters_code_names[0][filters.index(text)]
-    msg = bot.send_message(chat_id, 'Сколько страниц парсить?')
-    bot.register_next_step_handler(msg, askAmount)
 
-def askRating(message):
-    chat_id = message.chat.id
-    text = message.text.lower()
-    filters = task.filters[1]
-    if text not in filters:
-        msg = bot.send_message(chat_id, 'Такого порога нет. Введите порог корректно.')
-        bot.register_next_step_handler(msg, askRating)
-        return
-    task.myFilter = task.filters_code_names[1][filters.index(text)]
-    msg = bot.send_message(chat_id, 'Сколько страниц парсить?')
-    bot.register_next_step_handler(msg, askAmount)
+@dp.message_handler(commands=['start'])
+async def process_start_command(message: types.Message):
+    await message.reply("Привет!\nНапиши мне что-нибудь!")
 
-def askAmount(message):
-    chat_id = message.chat.id
-    text = message.text.lower()
-    if not text.isdigit():
-        msg = bot.send_message(chat_id, 'Количество страниц должно быть числом. Введите корректно.')
-        bot.register_next_step_handler(msg, askAmount)
-        return
-    if int(text) < 1 or int(text) > 11:
-        msg = bot.send_message(chat_id, 'Количество страниц должно быть >0 и <11. Введите корректно.')
-        bot.register_next_step_handler(msg, askAmount)
-        return
-    task.isRunning = False
-    output = ''
-    if task.mySource == 'top':
-        output = parser.getTitlesFromTop(int(text), task.myFilter)
-    else:
-        output = parser.getTitlesFromAll(int(text), task.myFilter)
-    msg = bot.send_message(chat_id, output)
 
-bot.polling(none_stop=True)
+@dp.message_handler(commands=['help'])
+async def process_help_command(message: types.Message):
+    await message.reply("Напиши мне что-нибудь, и я отпрпавлю этот текст тебе в ответ!")
+
+
+@dp.message_handler()
+async def echo_message(msg: types.Message):
+    await bot.send_message(msg.from_user.id, msg.text)
+
+
+if __name__ == '__main__':
+    executor.start_polling(dp)
